@@ -23,7 +23,7 @@ class RecipeAdmin(admin.ModelAdmin):
     )
 
     def display_products(self, obj):
-         return ', '.join([product.name for product in obj.product.all()])
+        return ', '.join([product.name for product in obj.product.all()])
 
 
 @admin.register(RecipeProduct)
@@ -31,5 +31,5 @@ class RecipeProductAdmin(admin.ModelAdmin):
     list_display = (
         'recipe',
         'product',
-        'weight'
+        'weight_in_grams'
     )
