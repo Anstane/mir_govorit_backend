@@ -31,5 +31,5 @@ class RecipeProductAdmin(admin.ModelAdmin):
     list_display = (
         'recipe',
         'product',
-        'weight_in_grams'
+        'weight'
     )

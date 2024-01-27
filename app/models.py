@@ -28,10 +28,10 @@ class Recipe(models.Model):
 class RecipeProduct(models.Model):
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
-    weight_in_grams = models.IntegerField()
+    weight = models.IntegerField()
 
     def __str__(self):
-        return f'{self.product.name} - {self.weight_in_grams}г'
+        return f'{self.product.name} - {self.weight}г'
     
     def save(self, *args, **kwargs):
         self.product.times_used += 1
