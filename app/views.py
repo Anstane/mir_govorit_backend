@@ -1,5 +1,7 @@
 from django.shortcuts import render, get_object_or_404
 from django.http import HttpResponse, HttpResponseNotFound, JsonResponse
+from django.db.models import F
+from django.db import transaction, connection
 
 from .models import Recipe, Product, RecipeProduct
 
@@ -25,18 +27,19 @@ def add_product_to_recipe(request):
         if not recipe_id or not product_id or not weight:
             raise ValueError('Отсутствуют необходимые параметры.')
 
-        recipe = get_object_or_404(Recipe, pk=recipe_id)
-        product = get_object_or_404(Product, pk=product_id)
+        with transaction.atomic(): # Обеспечиваем атомарность операции.
+            recipe = get_object_or_404(Recipe, pk=recipe_id)
+            product = get_object_or_404(Product, pk=product_id)
 
-        recipe_product = RecipeProduct.objects.filter(recipe=recipe, product=product).first()
+            recipe_product = RecipeProduct.objects.filter(recipe=recipe, product=product).first()
 
-        if recipe_product:
-            recipe_product.weight_in_grams = weight
-            recipe_product.save()
-        else:
-            RecipeProduct.objects.create(recipe=recipe, product=product, weight_in_grams=weight)
+            if recipe_product:
+                recipe_product.weight_in_grams = weight
+                recipe_product.save()
+            else:
+                RecipeProduct.objects.create(recipe=recipe, product=product, weight_in_grams=weight)
 
-        return HttpResponse('Данные по продукту и рецепту были обновлены.')
+            return HttpResponse('Данные по продукту и рецепту были обновлены.')
 
     except Recipe.DoesNotExist:
         return HttpResponseNotFound('Такого рецепта не существует.')
@@ -68,11 +71,14 @@ def cook_recipe(request):
         if not recipe_id:
             raise ValueError('Отсутствует необходимый параметр.')
         
-        recipe = get_object_or_404(Recipe, pk=recipe_id)
+        with transaction.atomic(): # Обеспечиваем атомарность операции.
+            recipe = get_object_or_404(Recipe, pk=recipe_id)
 
-        for recipe_product in recipe.recipeproduct_set.all():
-            recipe_product.product.times_used += 1
-            recipe_product.product.save()
+            product_ids = recipe.recipeproduct_set.values_list('product_id')
+            Product.objects.filter(id__in=product_ids).update(times_used=F('times_used') + 1)
+            # Получаем id продуктов, которые будем изменять.
+            # С помощью функции update() обновляем количество использований за 1 запрос к БД.
+            # Функция F() в этом случае нужна для изменения значения прямо в БД и поддержания атомарности.
 
         return HttpResponse('Рецепт был приготовлен.')
 
